@@ -1,8 +1,14 @@
+const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
+const session = require('express-session');
+const logger = require('morgan');
+const methodOverride = require('method-override');
+var https = require('https');
 var express = require('express')
-  , passport = require('passport')
-  , util = require('util')
-  , fs = require('fs')
-  , WebIDStrategy = require('../../../passport-webid').Strategy;
+var passport = require('passport')
+var util = require('util')
+var fs = require('fs')
+var WebIDStrategy = require('../../../passport-webid').Strategy;
 
 
 // Passport session setup.
@@ -30,7 +36,7 @@ passport.use(new WebIDStrategy(
   function(username, password, done) {
     // asynchronous verification, for effect...
     process.nextTick(function () {
-      
+
       // Find the user by username.  If there is no user with the given
       // username, or the password is not correct, set the user to `false` to
       // indicate failure.  Otherwise, return the authenticated `user`.
@@ -50,24 +56,24 @@ var options = {
     requestCert: true
 };
 
-var app = express.createServer(options);
+var app = express();
 
 // configure Express
-app.configure(function() {
+
   app.set('views', __dirname + '/views');
   app.set('view engine', 'ejs');
-  app.use(express.logger());
-  app.use(express.cookieParser());
-  app.use(express.bodyParser());
-  app.use(express.methodOverride());
-  app.use(express.session({ secret: 'keyboard cat' }));
-  // Initialize Passport!  Also use passport.session() middleware, to support
-  // persistent login sessions (recommended).
+  app.use(logger('dev'));
+  app.use(cookieParser());
+  app.use(bodyParser());
+  app.use(methodOverride());
+  app.use(session({  secret: 'keyboard cat',
+    resave: false,
+    saveUninitialized: false
+  }));
   app.use(passport.initialize());
   app.use(passport.session());
-  app.use(app.router);
   app.use(express.static(__dirname + '/../../public'));
-});
+
 
 
 app.get('/', function(req, res){
@@ -78,7 +84,7 @@ app.get('/account', ensureAuthenticated, function(req, res){
   res.render('account', { user: req.user });
 });
 
-app.get('/login', 
+app.get('/login',
   passport.authenticate('webid', { failureRedirect: '/fail' }),
   function(req, res) {
     res.redirect('/');
@@ -102,3 +108,6 @@ function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) { return next(); }
   res.redirect('/fail')
 }
+
+
+https.createServer(options, app).listen(1443);
