@@ -4,11 +4,12 @@ const session = require('express-session');
 const logger = require('morgan');
 const methodOverride = require('method-override');
 var https = require('https');
-var express = require('express')
-var passport = require('passport')
-var util = require('util')
-var fs = require('fs')
+var express = require('express');
+var passport = require('passport');
+var util = require('util');
+var fs = require('fs');
 var WebIDStrategy = require('../../../passport-webid').Strategy;
+var db = require('./db');
 
 
 // Passport session setup.
@@ -21,32 +22,24 @@ passport.serializeUser(function(user, done) {
 });
 
 passport.deserializeUser(function(id, done) {
-  findById(id, function (err, user) {
+   db.find(id, function (err, user) {
     done(err, user);
   });
 });
 
 
-// Use the LocalStrategy within Passport.
-//   Strategies in passport require a `verify` function, which accept
-//   credentials (in this case, a username and password), and invoke a callback
-//   with a user object.  In the real world, this would query a database;
-//   however, in this example we are using a baked-in set of users.
 passport.use(new WebIDStrategy(
-  function(username, password, done) {
-    // asynchronous verification, for effect...
-    process.nextTick(function () {
+  function(webid, certificate, req, done) {
+      db.find(webid, function (err, user) {
+        if(user)
+           done(null, user);
+        else {
+          var user = { id: webid, username:webid, certificate: JSON.stringify(certificate, null, 2) };
+          db.store(user,done);
+        }
+     });
 
-      // Find the user by username.  If there is no user with the given
-      // username, or the password is not correct, set the user to `false` to
-      // indicate failure.  Otherwise, return the authenticated `user`.
-      findByUsername(username, function(err, user) {
-        if (err) { return done(err); }
-        if (!user) { return done(null, false); }
-        if (user.password != password) { return done(null, false); }
-        return done(null, user);
-      })
-    });
+
   }
 ));
 
@@ -96,7 +89,7 @@ app.get('/logout', function(req, res){
   res.redirect('/');
 });
 
-app.listen(3000);
+
 
 
 // Simple route middleware to ensure user is authenticated.
