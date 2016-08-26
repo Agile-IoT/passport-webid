@@ -10,7 +10,7 @@ var util = require('util');
 var fs = require('fs');
 var WebIDStrategy = require('../../../passport-webid').Strategy;
 var db = require('./db');
-
+var flash = require('connect-flash');
 
 // Passport session setup.
 //   To support persistent login sessions, Passport needs to be able to
@@ -28,8 +28,8 @@ passport.deserializeUser(function(id, done) {
 });
 
 
-passport.use(new WebIDStrategy(
-  function(webid, certificate, req, done) {
+passport.use(new WebIDStrategy(  { failureRedirect: '/fail', failureFlash: true },
+    function(webid, certificate, req, done) {
       db.find(webid, function (err, user) {
         if(user)
            done(null, user);
@@ -64,30 +64,37 @@ var app = express();
     saveUninitialized: false
   }));
   app.use(passport.initialize());
+  app.use(flash());
   app.use(passport.session());
   app.use(express.static(__dirname + '/../../public'));
 
 
-
+//show information of the user when he is logged in
 app.get('/', function(req, res){
   res.render('index', { user: req.user });
 });
 
-app.get('/account', ensureAuthenticated, function(req, res){
-  res.render('account', { user: req.user });
+//error page
+app.get('/fail', function(req, res){
+  res.render('fail', { user : req.user, error : req.flash('error')});
+
+
 });
 
+//login page = verifies webid
 app.get('/login',
-  passport.authenticate('webid', { failureRedirect: '/fail' }),
+  passport.authenticate('webid', { failureRedirect: '/fail', failureFlash: true  }),
   function(req, res) {
     res.redirect('/');
 });
 
-
+//logout
 app.get('/logout', function(req, res){
   req.logout();
   res.redirect('/');
 });
+
+
 
 
 
