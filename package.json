@@ -1,6 +1,6 @@
 {
   "name": "passport-webid",
-  "version": "v1.0",
+  "version": "v1.0.0",
   "description": "Identification via WebID",
   "author": "nopbyte <nopbyte@github.com>",
   "repository": {
